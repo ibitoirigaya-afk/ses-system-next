@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: ses-system-next-postgres
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: ses_system_next
+      POSTGRES_USER: ses_user
+      POSTGRES_PASSWORD: ses_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
