@@ -45,6 +45,13 @@ export default async function ProjectDetailPage({ params }: Props) {
 
                     <div className="flex gap-3">
                         <Link
+                            href={`/dashboard/projects/${project.id}/matching`}
+                            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700"
+                        >
+                            マッチング
+                        </Link>
+
+                        <Link
                             href={`/dashboard/projects/${project.id}/edit`}
                             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
                         >
