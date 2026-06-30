@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { ProposalHistoryRestoreButton } from "@/features/proposalHistories/ProposalHistoryRestoreButton";
-import { getDeletedProposalHistories } from "@/lib/repositories/proposalHistoryRepository";
+import { getDeletedProposalHistoriesForUser } from "@/lib/repositories/proposalHistoryRepository";
 
 const statusLabels = {
     proposed: "提案中",
@@ -16,11 +16,13 @@ const statusLabels = {
 export default async function DeletedProposalHistoriesPage() {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
-    const proposalHistories = await getDeletedProposalHistories();
+    const proposalHistories = await getDeletedProposalHistoriesForUser(
+        session.user.id,
+    );
 
     return (
         <main className="min-h-screen bg-slate-100 p-8">

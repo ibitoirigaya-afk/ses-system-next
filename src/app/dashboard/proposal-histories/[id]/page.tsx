@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { ProposalHistoryDeleteButton } from "@/features/proposalHistories/ProposalHistoryDeleteButton";
-import { getProposalHistoryById } from "@/lib/repositories/proposalHistoryRepository";
+import { getProposalHistoryByIdForUser } from "@/lib/repositories/proposalHistoryRepository";
 
 type Props = {
     params: Promise<{
@@ -11,7 +11,7 @@ type Props = {
     }>;
 };
 
-const statusLabels = {
+const statusLabels: Record<string, string> = {
     proposed: "提案中",
     interviewing: "面談中",
     accepted: "成約",
@@ -22,16 +22,22 @@ const statusLabels = {
 export default async function ProposalHistoryDetailPage({ params }: Props) {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
     const { id } = await params;
-    const proposal = await getProposalHistoryById(id);
 
-    if (!proposal) {
+    const proposalHistory = await getProposalHistoryByIdForUser(
+        id,
+        session.user.id,
+    );
+
+    if (!proposalHistory) {
         notFound();
     }
+
+    const proposal = proposalHistory;
 
     return (
         <main className="min-h-screen bg-slate-100 p-8">
@@ -59,14 +65,19 @@ export default async function ProposalHistoryDetailPage({ params }: Props) {
                             編集する
                         </Link>
 
-                        <ProposalHistoryDeleteButton proposalHistoryId={proposal.id} />
+                        <ProposalHistoryDeleteButton
+                            proposalHistoryId={proposal.id}
+                        />
                     </div>
                 </div>
 
                 <section className="rounded-2xl bg-white p-8 shadow">
                     <dl className="grid gap-6">
                         <div>
-                            <dt className="text-sm font-bold text-slate-500">案件</dt>
+                            <dt className="text-sm font-bold text-slate-500">
+                                案件
+                            </dt>
+
                             <dd className="mt-2">
                                 <Link
                                     href={`/dashboard/projects/${proposal.project.id}`}
@@ -78,7 +89,10 @@ export default async function ProposalHistoryDetailPage({ params }: Props) {
                         </div>
 
                         <div>
-                            <dt className="text-sm font-bold text-slate-500">要員</dt>
+                            <dt className="text-sm font-bold text-slate-500">
+                                要員
+                            </dt>
+
                             <dd className="mt-2">
                                 <Link
                                     href={`/dashboard/engineers/${proposal.engineer.id}`}
@@ -86,6 +100,7 @@ export default async function ProposalHistoryDetailPage({ params }: Props) {
                                 >
                                     {proposal.engineer.name}
                                 </Link>
+
                                 <p className="mt-1 text-sm text-slate-500">
                                     所属会社：{proposal.engineer.companyName}
                                 </p>
@@ -94,14 +109,20 @@ export default async function ProposalHistoryDetailPage({ params }: Props) {
 
                         <div className="grid gap-6 md:grid-cols-2">
                             <div>
-                                <dt className="text-sm font-bold text-slate-500">ステータス</dt>
+                                <dt className="text-sm font-bold text-slate-500">
+                                    ステータス
+                                </dt>
+
                                 <dd className="mt-2 text-slate-900">
                                     {statusLabels[proposal.status]}
                                 </dd>
                             </div>
 
                             <div>
-                                <dt className="text-sm font-bold text-slate-500">提案日</dt>
+                                <dt className="text-sm font-bold text-slate-500">
+                                    提案日
+                                </dt>
+
                                 <dd className="mt-2 text-slate-900">
                                     {proposal.proposedAt.toLocaleDateString("ja-JP")}
                                 </dd>
@@ -109,7 +130,10 @@ export default async function ProposalHistoryDetailPage({ params }: Props) {
                         </div>
 
                         <div>
-                            <dt className="text-sm font-bold text-slate-500">面談日</dt>
+                            <dt className="text-sm font-bold text-slate-500">
+                                面談日
+                            </dt>
+
                             <dd className="mt-2 text-slate-900">
                                 {proposal.interviewDate
                                     ? proposal.interviewDate.toLocaleDateString("ja-JP")
@@ -118,7 +142,10 @@ export default async function ProposalHistoryDetailPage({ params }: Props) {
                         </div>
 
                         <div>
-                            <dt className="text-sm font-bold text-slate-500">メモ</dt>
+                            <dt className="text-sm font-bold text-slate-500">
+                                メモ
+                            </dt>
+
                             <dd className="mt-2 whitespace-pre-wrap leading-7 text-slate-700">
                                 {proposal.memo ?? "未設定"}
                             </dd>

@@ -7,6 +7,8 @@ import { auth } from "@/auth";
 import {
     createProposalHistory,
     deleteProposalHistory,
+    getDeletedProposalHistoryByIdForUser,
+    getProposalHistoryByIdForUser,
     getProposalHistoryByProjectAndEngineer,
     restoreProposalHistory,
     updateProposalHistory,
@@ -99,6 +101,17 @@ export async function updateProposalHistoryAction(
         redirect("/login");
     }
 
+    const targetProposalHistory = await getProposalHistoryByIdForUser(
+        id,
+        session.user.id,
+    );
+
+    if (!targetProposalHistory) {
+        return {
+            error: "この提案履歴を編集する権限がありません。",
+        };
+    }
+
     const status = toProposalStatus(formData.get("status"));
     const interviewDate = toOptionalDate(formData.get("interviewDate"));
     const memo = toOptionalString(formData.get("memo"));
@@ -119,6 +132,17 @@ export async function deleteProposalHistoryAction(id: string) {
         redirect("/login");
     }
 
+    const targetProposalHistory = await getProposalHistoryByIdForUser(
+        id,
+        session.user.id,
+    );
+
+    if (!targetProposalHistory) {
+        return {
+            error: "この提案履歴を削除する権限がありません。",
+        };
+    }
+
     await deleteProposalHistory(id);
 
     redirect("/dashboard/proposal-histories");
@@ -129,6 +153,17 @@ export async function restoreProposalHistoryAction(id: string) {
 
     if (!session?.user?.id) {
         redirect("/login");
+    }
+
+    const targetProposalHistory = await getDeletedProposalHistoryByIdForUser(
+        id,
+        session.user.id,
+    );
+
+    if (!targetProposalHistory) {
+        return {
+            error: "この提案履歴を復元する権限がありません。",
+        };
     }
 
     await restoreProposalHistory(id);

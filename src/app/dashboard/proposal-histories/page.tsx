@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
-import { getProposalHistories } from "@/lib/repositories/proposalHistoryRepository";
+import { getProposalHistoriesForUser } from "@/lib/repositories/proposalHistoryRepository";
 
 const statusLabels = {
     proposed: "提案中",
@@ -15,11 +15,11 @@ const statusLabels = {
 export default async function ProposalHistoriesPage() {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
-    const proposalHistories = await getProposalHistories();
+    const proposalHistories = await getProposalHistoriesForUser(session.user.id);
 
     return (
         <main className="min-h-screen bg-slate-100 p-8">
