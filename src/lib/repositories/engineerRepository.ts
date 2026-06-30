@@ -163,3 +163,11 @@ export async function restoreEngineer(id: string) {
         },
     });
 }
+
+export async function getEngineerCount() {
+    return prisma.engineer.count({
+        where: {
+            deletedAt: null,
+        },
+    });
+}

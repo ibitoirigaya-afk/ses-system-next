@@ -1,0 +1,71 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const navItems = [
+    {
+        title: "TOP",
+        href: "/dashboard",
+    },
+    {
+        title: "案件",
+        href: "/dashboard/projects",
+    },
+    {
+        title: "BP企業",
+        href: "/dashboard/bp-companies",
+    },
+    {
+        title: "要員",
+        href: "/dashboard/engineers",
+    },
+    {
+        title: "スキル",
+        href: "/dashboard/skills",
+    },
+    {
+        title: "提案履歴",
+        href: "/dashboard/proposal-histories",
+    },
+    {
+        title: "稼働実績",
+        href: "/dashboard/work-records",
+    },
+];
+
+function isActivePath(pathname: string, href: string) {
+    if (href === "/dashboard") {
+        return pathname === "/dashboard";
+    }
+
+    return pathname.startsWith(href);
+}
+
+export default function DashboardNav() {
+    const pathname = usePathname();
+
+    return (
+        <nav className="border-b border-slate-300 bg-white">
+            <div className="mx-auto flex max-w-6xl gap-3 overflow-x-auto px-8 py-3">
+                {navItems.map((item) => {
+                    const isActive = isActivePath(pathname, item.href);
+
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={
+                                isActive
+                                    ? "whitespace-nowrap rounded bg-blue-600 px-4 py-3 text-sm font-bold text-white"
+                                    : "whitespace-nowrap rounded px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-100"
+                            }
+                        >
+                            {item.title}
+                        </Link>
+                    );
+                })}
+            </div>
+        </nav>
+    );
+}

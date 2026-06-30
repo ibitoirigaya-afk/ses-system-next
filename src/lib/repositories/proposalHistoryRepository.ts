@@ -167,3 +167,28 @@ export async function restoreProposalHistory(id: string) {
         },
     });
 }
+
+export async function getProposalHistoryCount() {
+    return prisma.proposalHistory.count({
+        where: {
+            deletedAt: null,
+        },
+    });
+}
+
+export async function getRecentProposalHistories() {
+    return prisma.proposalHistory.findMany({
+        where: {
+            deletedAt: null,
+        },
+        include: {
+            project: true,
+            engineer: true,
+            createdBy: true,
+        },
+        orderBy: {
+            createdAt: "desc",
+        },
+        take: 5,
+    });
+}

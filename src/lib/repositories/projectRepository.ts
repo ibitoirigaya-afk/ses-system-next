@@ -163,3 +163,11 @@ export async function restoreProject(id: string) {
         },
     });
 }
+
+export async function getProjectCount() {
+    return prisma.project.count({
+        where: {
+            deletedAt: null,
+        },
+    });
+}

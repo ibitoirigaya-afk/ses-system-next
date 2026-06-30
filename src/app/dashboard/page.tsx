@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
-import { logoutAction } from "@/features/auth/actions";
+import { getEngineerCount } from "@/lib/repositories/engineerRepository";
+import { getProjectCount } from "@/lib/repositories/projectRepository";
+import {
+    getProposalHistoryCount,
+    getRecentProposalHistories,
+} from "@/lib/repositories/proposalHistoryRepository";
+import { getCurrentMonthGrossProfitTotal } from "@/lib/repositories/workRecordRepository";
 
 const menuItems = [
     {
@@ -37,64 +41,90 @@ const menuItems = [
     },
 ];
 
-export default async function DashboardPage() {
-    const session = await auth();
-
-    if (!session) {
-        redirect("/login");
+function getProposalStatusLabel(status: string) {
+    if (status === "proposed") {
+        return "提案中";
     }
 
+    if (status === "interviewing") {
+        return "面談中";
+    }
+
+    if (status === "accepted") {
+        return "成約";
+    }
+
+    if (status === "rejected") {
+        return "見送り";
+    }
+
+    if (status === "withdrawn") {
+        return "辞退";
+    }
+
+    return status;
+}
+
+export default async function DashboardPage() {
+    const [
+        projectCount,
+        engineerCount,
+        proposalHistoryCount,
+        currentMonthGrossProfitTotal,
+        recentProposalHistories,
+    ] = await Promise.all([
+        getProjectCount(),
+        getEngineerCount(),
+        getProposalHistoryCount(),
+        getCurrentMonthGrossProfitTotal(),
+        getRecentProposalHistories(),
+    ]);
+
     return (
-        <main className="min-h-screen bg-slate-100 p-8">
+        <main className="min-h-screen bg-slate-100 px-8 py-10">
             <div className="mx-auto max-w-6xl space-y-8">
-                <section className="rounded-2xl bg-white p-8 shadow">
-                    <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                        <div>
-                            <p className="text-sm font-semibold text-blue-600">Dashboard</p>
+                <section>
+                    <h2 className="text-2xl font-bold text-slate-900">
+                        管理者TOP
+                    </h2>
 
-                            <h1 className="mt-3 text-3xl font-bold text-slate-900">
-                                ダッシュボード
-                            </h1>
-
-                            <p className="mt-3 text-slate-600">
-                                ログイン中：{session.user?.name} / 権限：
-                                {session.user?.role}
-                            </p>
-                        </div>
-
-                        <form action={logoutAction}>
-                            <button
-                                type="submit"
-                                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700"
-                            >
-                                ログアウト
-                            </button>
-                        </form>
-                    </div>
+                    <p className="mt-2 text-slate-500">
+                        システム全体の状況を確認できます。
+                    </p>
                 </section>
 
-                <section className="grid gap-4 md:grid-cols-3">
+                <section className="grid gap-4 md:grid-cols-4">
                     <div className="rounded-2xl bg-white p-6 shadow">
-                        <p className="text-sm font-semibold text-slate-500">案件数</p>
-                        <p className="mt-3 text-3xl font-bold text-slate-900">0</p>
-                        <p className="mt-2 text-sm text-slate-500">
-                            案件CRUD作成後に自動集計します。
+                        <p className="text-sm font-bold text-slate-500">案件数</p>
+                        <p className="mt-3 text-3xl font-bold text-slate-900">
+                            {projectCount}
+                            <span className="ml-1 text-base text-slate-500">件</span>
                         </p>
                     </div>
 
                     <div className="rounded-2xl bg-white p-6 shadow">
-                        <p className="text-sm font-semibold text-slate-500">要員数</p>
-                        <p className="mt-3 text-3xl font-bold text-slate-900">0</p>
-                        <p className="mt-2 text-sm text-slate-500">
-                            要員管理作成後に自動集計します。
+                        <p className="text-sm font-bold text-slate-500">要員数</p>
+                        <p className="mt-3 text-3xl font-bold text-slate-900">
+                            {engineerCount}
+                            <span className="ml-1 text-base text-slate-500">人</span>
                         </p>
                     </div>
 
                     <div className="rounded-2xl bg-white p-6 shadow">
-                        <p className="text-sm font-semibold text-slate-500">提案中</p>
-                        <p className="mt-3 text-3xl font-bold text-slate-900">0</p>
-                        <p className="mt-2 text-sm text-slate-500">
-                            提案履歴作成後に自動集計します。
+                        <p className="text-sm font-bold text-slate-500">提案履歴数</p>
+                        <p className="mt-3 text-3xl font-bold text-slate-900">
+                            {proposalHistoryCount}
+                            <span className="ml-1 text-base text-slate-500">件</span>
+                        </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-white p-6 shadow">
+                        <p className="text-sm font-bold text-slate-500">
+                            今月の粗利合計
+                        </p>
+                        <p className="mt-3 text-3xl font-bold text-slate-900">
+                            {currentMonthGrossProfitTotal.toLocaleString()}
+                            <span className="ml-1 text-base text-slate-500">円</span>
                         </p>
                     </div>
                 </section>
@@ -123,6 +153,59 @@ export default async function DashboardPage() {
                             </Link>
                         ))}
                     </div>
+                </section>
+
+                <section className="rounded-2xl bg-white p-6 shadow">
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-900">
+                                最近の提案履歴
+                            </h2>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                                直近で作成された提案を5件まで表示します。
+                            </p>
+                        </div>
+
+                        <Link
+                            href="/dashboard/proposal-histories"
+                            className="text-sm font-bold text-blue-600 hover:text-blue-700"
+                        >
+                            すべて見る →
+                        </Link>
+                    </div>
+
+                    {recentProposalHistories.length === 0 ? (
+                        <p className="mt-6 rounded-lg bg-slate-50 p-4 text-sm text-slate-500">
+                            提案履歴はまだありません。
+                        </p>
+                    ) : (
+                        <div className="mt-6 grid gap-3">
+                            {recentProposalHistories.map((proposal) => (
+                                <Link
+                                    key={proposal.id}
+                                    href={`/dashboard/proposal-histories/${proposal.id}`}
+                                    className="rounded-xl border border-slate-200 p-4 transition hover:bg-slate-50"
+                                >
+                                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                        <div>
+                                            <p className="font-bold text-slate-900">
+                                                {proposal.project.title}
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-slate-500">
+                                                要員：{proposal.engineer.name}
+                                            </p>
+                                        </div>
+
+                                        <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
+                                            {getProposalStatusLabel(proposal.status)}
+                                        </span>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
                 </section>
             </div>
         </main>

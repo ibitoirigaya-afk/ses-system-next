@@ -140,3 +140,23 @@ export async function restoreWorkRecord(id: string) {
         },
     });
 }
+
+export async function getCurrentMonthGrossProfitTotal() {
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const currentMonth = `${year}-${month}`;
+
+    const result = await prisma.workRecord.aggregate({
+        where: {
+            deletedAt: null,
+            targetMonth: currentMonth,
+        },
+        _sum: {
+            grossProfit: true,
+        },
+    });
+
+    return result._sum.grossProfit ?? 0;
+}
