@@ -3,12 +3,9 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { getBpCompanyCount } from "@/lib/repositories/bpCompanyRepository";
-import { getEngineerCount } from "@/lib/repositories/engineerRepository";
-import { getProjectCount } from "@/lib/repositories/projectRepository";
-import {
-    getProposalHistoryCount,
-    getRecentProposalHistories,
-} from "@/lib/repositories/proposalHistoryRepository";
+import { getEngineersForUser } from "@/lib/repositories/engineerRepository";
+import { getProjectsForUser } from "@/lib/repositories/projectRepository";
+import { getProposalHistoriesForUser } from "@/lib/repositories/proposalHistoryRepository";
 import { getCurrentMonthGrossProfitTotal } from "@/lib/repositories/workRecordRepository";
 
 const menuItems = [
@@ -77,11 +74,11 @@ function getProposalStatusLabel(status: string) {
 export default async function DashboardPage() {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
-    const role = session.user?.role ?? "user";
+    const role = session.user.role ?? "user";
     const filteredMenuItems = menuItems.filter((item) =>
         item.roles.includes(role),
     );
@@ -100,21 +97,27 @@ export default async function DashboardPage() {
                 ? "自社の案件・要員・提案状況を確認できます。"
                 : "担当要員や提案状況を確認できます。";
 
-    const [
-        projectCount,
-        bpCompanyCount,
-        engineerCount,
-        proposalHistoryCount,
-        currentMonthGrossProfitTotal,
-        recentProposalHistories,
-    ] = await Promise.all([
-        getProjectCount(),
-        getBpCompanyCount(),
-        getEngineerCount(),
-        getProposalHistoryCount(),
-        getCurrentMonthGrossProfitTotal(),
-        getRecentProposalHistories(),
+    const [projects, engineers, proposalHistories] = await Promise.all([
+        getProjectsForUser(session.user.id),
+        getEngineersForUser(session.user.id),
+        getProposalHistoriesForUser(session.user.id),
     ]);
+
+    let bpCompanyCount = 0;
+    let currentMonthGrossProfitTotal = 0;
+
+    if (role === "admin") {
+        const [adminBpCompanyCount, adminCurrentMonthGrossProfitTotal] =
+            await Promise.all([
+                getBpCompanyCount(),
+                getCurrentMonthGrossProfitTotal(),
+            ]);
+
+        bpCompanyCount = adminBpCompanyCount;
+        currentMonthGrossProfitTotal = adminCurrentMonthGrossProfitTotal;
+    }
+
+    const recentProposalHistories = proposalHistories.slice(0, 5);
 
     return (
         <main className="min-h-screen bg-slate-100 px-8 py-10">
@@ -129,52 +132,82 @@ export default async function DashboardPage() {
                     </p>
                 </section>
 
-                <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                <section
+                    className={
+                        role === "admin"
+                            ? "grid gap-4 md:grid-cols-2 lg:grid-cols-5"
+                            : "grid gap-4 md:grid-cols-3"
+                    }
+                >
                     <div className="rounded-2xl bg-white p-6 shadow">
-                        <p className="text-sm font-bold text-slate-500">案件数</p>
+                        <p className="text-sm font-bold text-slate-500">
+                            案件数
+                        </p>
                         <p className="mt-3 text-3xl font-bold text-slate-900">
-                            {projectCount}
-                            <span className="ml-1 text-base text-slate-500">件</span>
+                            {projects.length}
+                            <span className="ml-1 text-base text-slate-500">
+                                件
+                            </span>
                         </p>
                     </div>
 
-                    <div className="rounded-2xl bg-white p-6 shadow">
-                        <p className="text-sm font-bold text-slate-500">BP企業数</p>
-                        <p className="mt-3 text-3xl font-bold text-slate-900">
-                            {bpCompanyCount}
-                            <span className="ml-1 text-base text-slate-500">社</span>
-                        </p>
-                    </div>
+                    {role === "admin" && (
+                        <div className="rounded-2xl bg-white p-6 shadow">
+                            <p className="text-sm font-bold text-slate-500">
+                                BP企業数
+                            </p>
+                            <p className="mt-3 text-3xl font-bold text-slate-900">
+                                {bpCompanyCount}
+                                <span className="ml-1 text-base text-slate-500">
+                                    社
+                                </span>
+                            </p>
+                        </div>
+                    )}
 
                     <div className="rounded-2xl bg-white p-6 shadow">
-                        <p className="text-sm font-bold text-slate-500">要員数</p>
-                        <p className="mt-3 text-3xl font-bold text-slate-900">
-                            {engineerCount}
-                            <span className="ml-1 text-base text-slate-500">人</span>
+                        <p className="text-sm font-bold text-slate-500">
+                            要員数
                         </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-white p-6 shadow">
-                        <p className="text-sm font-bold text-slate-500">提案履歴数</p>
                         <p className="mt-3 text-3xl font-bold text-slate-900">
-                            {proposalHistoryCount}
-                            <span className="ml-1 text-base text-slate-500">件</span>
+                            {engineers.length}
+                            <span className="ml-1 text-base text-slate-500">
+                                人
+                            </span>
                         </p>
                     </div>
 
                     <div className="rounded-2xl bg-white p-6 shadow">
                         <p className="text-sm font-bold text-slate-500">
-                            今月の粗利合計
+                            提案履歴数
                         </p>
                         <p className="mt-3 text-3xl font-bold text-slate-900">
-                            {currentMonthGrossProfitTotal.toLocaleString()}
-                            <span className="ml-1 text-base text-slate-500">円</span>
+                            {proposalHistories.length}
+                            <span className="ml-1 text-base text-slate-500">
+                                件
+                            </span>
                         </p>
                     </div>
+
+                    {role === "admin" && (
+                        <div className="rounded-2xl bg-white p-6 shadow">
+                            <p className="text-sm font-bold text-slate-500">
+                                今月の粗利合計
+                            </p>
+                            <p className="mt-3 text-3xl font-bold text-slate-900">
+                                {currentMonthGrossProfitTotal.toLocaleString()}
+                                <span className="ml-1 text-base text-slate-500">
+                                    円
+                                </span>
+                            </p>
+                        </div>
+                    )}
                 </section>
 
                 <section>
-                    <h2 className="text-xl font-bold text-slate-900">機能メニュー</h2>
+                    <h2 className="text-xl font-bold text-slate-900">
+                        機能メニュー
+                    </h2>
 
                     <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {filteredMenuItems.map((item) => (
@@ -207,7 +240,7 @@ export default async function DashboardPage() {
                             </h2>
 
                             <p className="mt-1 text-sm text-slate-500">
-                                直近で作成された提案を5件まで表示します。
+                                閲覧可能な提案を5件まで表示します。
                             </p>
                         </div>
 
@@ -243,7 +276,9 @@ export default async function DashboardPage() {
                                         </div>
 
                                         <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
-                                            {getProposalStatusLabel(proposal.status)}
+                                            {getProposalStatusLabel(
+                                                proposal.status,
+                                            )}
                                         </span>
                                     </div>
                                 </Link>
