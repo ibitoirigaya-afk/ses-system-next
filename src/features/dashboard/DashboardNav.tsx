@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 type Props = {
     role: string;
+    hasBpCompany: boolean;
 };
 
 const navItems = [
@@ -27,6 +28,12 @@ const navItems = [
         title: "要員",
         href: "/dashboard/engineers",
         roles: ["admin", "user", "company"],
+    },
+    {
+        title: "自社情報",
+        href: "/dashboard/my-company",
+        roles: ["user", "company"],
+        requiresBpCompany: true,
     },
     {
         title: "スキル",
@@ -53,12 +60,20 @@ function isActivePath(pathname: string, href: string) {
     return pathname.startsWith(href);
 }
 
-export default function DashboardNav({ role }: Props) {
+export default function DashboardNav({ role, hasBpCompany }: Props) {
     const pathname = usePathname();
 
-    const filteredNavItems = navItems.filter((item) =>
-        item.roles.includes(role),
-    );
+    const filteredNavItems = navItems.filter((item) => {
+        if (!item.roles.includes(role)) {
+            return false;
+        }
+
+        if (item.requiresBpCompany && !hasBpCompany) {
+            return false;
+        }
+
+        return true;
+    });
 
     return (
         <nav className="border-b border-slate-300 bg-white">

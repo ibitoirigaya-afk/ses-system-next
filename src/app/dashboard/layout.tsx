@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { logoutAction } from "@/features/auth/actions";
 import DashboardNav from "@/features/dashboard/DashboardNav";
+import { prisma } from "@/lib/db";
 
 type Props = {
     children: ReactNode;
@@ -12,9 +13,20 @@ type Props = {
 export default async function DashboardLayout({ children }: Props) {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
+
+    const currentUser = await prisma.user.findUnique({
+        where: {
+            id: session.user.id,
+        },
+        select: {
+            bpCompanyId: true,
+        },
+    });
+
+    const hasBpCompany = currentUser?.bpCompanyId !== null && currentUser?.bpCompanyId !== undefined;
 
     return (
         <div className="min-h-screen bg-slate-100">
@@ -42,7 +54,10 @@ export default async function DashboardLayout({ children }: Props) {
                     </div>
                 </header>
 
-                <DashboardNav role={session.user?.role ?? ""} />
+                <DashboardNav
+                    role={session.user?.role ?? ""}
+                    hasBpCompany={hasBpCompany}
+                />
             </div>
 
             {children}
