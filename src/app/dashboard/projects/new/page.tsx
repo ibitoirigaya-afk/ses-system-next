@@ -1,7 +1,23 @@
+import { redirect } from "next/navigation";
+
+import { auth } from "@/auth";
 import ProjectForm from "@/features/projects/ProjectForm";
+import { canCreateProjectForUser } from "@/lib/repositories/projectRepository";
 import { getSkills } from "@/lib/repositories/skillRepository";
 
 export default async function NewProjectPage() {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+        redirect("/login");
+    }
+
+    const canCreateProject = await canCreateProjectForUser(session.user.id);
+
+    if (!canCreateProject) {
+        redirect("/dashboard/projects");
+    }
+
     const skills = await getSkills();
 
     return (

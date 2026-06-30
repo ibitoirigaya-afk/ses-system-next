@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
 
 type CreateProjectInput = {
@@ -17,27 +19,70 @@ type UpdateProjectInput = {
     skillIds?: string[];
 };
 
+const projectInclude = {
+    createdBy: true,
+    skills: {
+        where: {
+            deletedAt: null,
+        },
+        orderBy: [
+            {
+                category: "asc",
+            },
+            {
+                name: "asc",
+            },
+        ],
+    },
+} satisfies Prisma.ProjectInclude;
+
+async function getProjectAccessUser(userId: string) {
+    return prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+        select: {
+            id: true,
+            role: true,
+        },
+    });
+}
+
+export async function canCreateProjectForUser(userId: string) {
+    const user = await getProjectAccessUser(userId);
+
+    if (!user) {
+        return false;
+    }
+
+    return user.role === "admin" || user.role === "company";
+}
+
 export async function getProjects() {
     return prisma.project.findMany({
         where: {
             deletedAt: null,
         },
-        include: {
-            createdBy: true,
-            skills: {
-                where: {
-                    deletedAt: null,
-                },
-                orderBy: [
-                    {
-                        category: "asc",
-                    },
-                    {
-                        name: "asc",
-                    },
-                ],
-            },
+        include: projectInclude,
+        orderBy: {
+            createdAt: "desc",
         },
+    });
+}
+
+export async function getProjectsForUser(userId: string) {
+    const user = await getProjectAccessUser(userId);
+
+    if (!user) {
+        return [];
+    }
+
+    // 案件は、マッチングや提案に使うため全ログインユーザーが閲覧可能
+    return prisma.project.findMany({
+        where: {
+            deletedAt: null,
+        },
+        include: projectInclude,
         orderBy: {
             createdAt: "desc",
         },
@@ -51,22 +96,32 @@ export async function getDeletedProjects() {
                 not: null,
             },
         },
-        include: {
-            createdBy: true,
-            skills: {
-                where: {
-                    deletedAt: null,
-                },
-                orderBy: [
-                    {
-                        category: "asc",
-                    },
-                    {
-                        name: "asc",
-                    },
-                ],
-            },
+        include: projectInclude,
+        orderBy: {
+            deletedAt: "desc",
         },
+    });
+}
+
+export async function getDeletedProjectsForUser(userId: string) {
+    const user = await getProjectAccessUser(userId);
+
+    if (!user) {
+        return [];
+    }
+
+    if (user.role === "admin") {
+        return getDeletedProjects();
+    }
+
+    return prisma.project.findMany({
+        where: {
+            deletedAt: {
+                not: null,
+            },
+            createdById: userId,
+        },
+        include: projectInclude,
         orderBy: {
             deletedAt: "desc",
         },
@@ -79,22 +134,88 @@ export async function getProjectById(id: string) {
             id,
             deletedAt: null,
         },
-        include: {
-            createdBy: true,
-            skills: {
-                where: {
-                    deletedAt: null,
-                },
-                orderBy: [
-                    {
-                        category: "asc",
-                    },
-                    {
-                        name: "asc",
-                    },
-                ],
-            },
+        include: projectInclude,
+    });
+}
+
+export async function getProjectByIdForUser(id: string, userId: string) {
+    const user = await getProjectAccessUser(userId);
+
+    if (!user) {
+        return null;
+    }
+
+    // 案件詳細も全ログインユーザーが閲覧可能
+    return prisma.project.findFirst({
+        where: {
+            id,
+            deletedAt: null,
         },
+        include: projectInclude,
+    });
+}
+
+export async function getProjectManageTargetForUser(
+    id: string,
+    userId: string,
+) {
+    const user = await getProjectAccessUser(userId);
+
+    if (!user) {
+        return null;
+    }
+
+    if (user.role === "admin") {
+        return prisma.project.findFirst({
+            where: {
+                id,
+                deletedAt: null,
+            },
+            include: projectInclude,
+        });
+    }
+
+    return prisma.project.findFirst({
+        where: {
+            id,
+            deletedAt: null,
+            createdById: userId,
+        },
+        include: projectInclude,
+    });
+}
+
+export async function getDeletedProjectByIdForUser(
+    id: string,
+    userId: string,
+) {
+    const user = await getProjectAccessUser(userId);
+
+    if (!user) {
+        return null;
+    }
+
+    if (user.role === "admin") {
+        return prisma.project.findFirst({
+            where: {
+                id,
+                deletedAt: {
+                    not: null,
+                },
+            },
+            include: projectInclude,
+        });
+    }
+
+    return prisma.project.findFirst({
+        where: {
+            id,
+            deletedAt: {
+                not: null,
+            },
+            createdById: userId,
+        },
+        include: projectInclude,
     });
 }
 

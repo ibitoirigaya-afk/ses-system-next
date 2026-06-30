@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import ProjectEditForm from "@/features/projects/ProjectEditForm";
-import { getProjectById } from "@/lib/repositories/projectRepository";
+import { getProjectManageTargetForUser } from "@/lib/repositories/projectRepository";
 import { getSkills } from "@/lib/repositories/skillRepository";
 
 type Props = {
@@ -14,13 +14,13 @@ type Props = {
 export default async function ProjectEditPage({ params }: Props) {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
     const { id } = await params;
 
-    const project = await getProjectById(id);
+    const project = await getProjectManageTargetForUser(id, session.user.id);
 
     if (!project) {
         notFound();
@@ -32,7 +32,9 @@ export default async function ProjectEditPage({ params }: Props) {
         <main className="min-h-screen bg-slate-100 p-8">
             <div className="mx-auto max-w-3xl space-y-6">
                 <div>
-                    <p className="text-sm font-semibold text-blue-600">Project Edit</p>
+                    <p className="text-sm font-semibold text-blue-600">
+                        Project Edit
+                    </p>
 
                     <h1 className="mt-2 text-3xl font-bold text-slate-900">
                         案件編集

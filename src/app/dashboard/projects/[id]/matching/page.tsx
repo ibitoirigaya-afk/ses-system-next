@@ -1,11 +1,11 @@
+import type { Skill } from "@prisma/client";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import type { Skill } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { CreateProposalButton } from "@/features/proposalHistories/CreateProposalButton";
-import { getEngineers } from "@/lib/repositories/engineerRepository";
-import { getProjectById } from "@/lib/repositories/projectRepository";
+import { getEngineersForUser } from "@/lib/repositories/engineerRepository";
+import { getProjectByIdForUser } from "@/lib/repositories/projectRepository";
 
 type Props = {
     params: Promise<{
@@ -40,19 +40,19 @@ function calculateMatchRate(projectSkills: Skill[], engineerSkills: Skill[]) {
 export default async function ProjectMatchingPage({ params }: Props) {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
     const { id } = await params;
 
-    const project = await getProjectById(id);
+    const project = await getProjectByIdForUser(id, session.user.id);
 
     if (!project) {
         notFound();
     }
 
-    const engineers = await getEngineers();
+    const engineers = await getEngineersForUser(session.user.id);
 
     const matchingEngineers = engineers
         .map((engineer) => {
@@ -118,76 +118,82 @@ export default async function ProjectMatchingPage({ params }: Props) {
                 {engineers.length === 0 ? (
                     <section className="rounded-2xl bg-white p-8 text-center shadow">
                         <p className="text-slate-500">
-                            要員が登録されていません。先に要員を登録してください。
+                            表示できる要員が登録されていません。
                         </p>
                     </section>
                 ) : (
                     <section className="space-y-4">
-                        {matchingEngineers.map(({ engineer, matchedSkills, matchRate }) => (
-                            <article
-                                key={engineer.id}
-                                className="rounded-2xl bg-white p-6 shadow"
-                            >
-                                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-2">
+                        {matchingEngineers.map(
+                            ({ engineer, matchedSkills, matchRate }) => (
+                                <article
+                                    key={engineer.id}
+                                    className="rounded-2xl bg-white p-6 shadow"
+                                >
+                                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                        <div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Link
+                                                    href={`/dashboard/engineers/${engineer.id}`}
+                                                    className="text-xl font-bold text-slate-900 hover:text-blue-600"
+                                                >
+                                                    {engineer.name}
+                                                </Link>
+
+                                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                                                    一致率 {matchRate}%
+                                                </span>
+                                            </div>
+
+                                            <p className="mt-2 text-sm text-slate-500">
+                                                所属会社：
+                                                {engineer.companyName}
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-slate-500">
+                                                希望単価：
+                                                {engineer.desiredUnitPrice !==
+                                                    null
+                                                    ? `${engineer.desiredUnitPrice.toLocaleString()}円`
+                                                    : "未設定"}
+                                            </p>
+
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                {matchedSkills.length === 0 ? (
+                                                    <span className="text-sm text-slate-400">
+                                                        一致スキルなし
+                                                    </span>
+                                                ) : (
+                                                    matchedSkills.map(
+                                                        (skill) => (
+                                                            <span
+                                                                key={skill.id}
+                                                                className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
+                                                            >
+                                                                {skill.name}
+                                                            </span>
+                                                        ),
+                                                    )
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full space-y-3 md:w-80">
+                                            <CreateProposalButton
+                                                projectId={project.id}
+                                                engineerId={engineer.id}
+                                            />
+
                                             <Link
                                                 href={`/dashboard/engineers/${engineer.id}`}
-                                                className="text-xl font-bold text-slate-900 hover:text-blue-600"
+                                                className="block rounded-lg bg-blue-600 px-4 py-2 text-center text-sm font-bold text-white hover:bg-blue-700"
                                             >
-                                                {engineer.name}
+                                                要員詳細
                                             </Link>
-
-                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-                                                一致率 {matchRate}%
-                                            </span>
-                                        </div>
-
-                                        <p className="mt-2 text-sm text-slate-500">
-                                            所属会社：{engineer.companyName}
-                                        </p>
-
-                                        <p className="mt-1 text-sm text-slate-500">
-                                            希望単価：
-                                            {engineer.desiredUnitPrice !== null
-                                                ? `${engineer.desiredUnitPrice.toLocaleString()}円`
-                                                : "未設定"}
-                                        </p>
-
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {matchedSkills.length === 0 ? (
-                                                <span className="text-sm text-slate-400">
-                                                    一致スキルなし
-                                                </span>
-                                            ) : (
-                                                matchedSkills.map((skill) => (
-                                                    <span
-                                                        key={skill.id}
-                                                        className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
-                                                    >
-                                                        {skill.name}
-                                                    </span>
-                                                ))
-                                            )}
                                         </div>
                                     </div>
-
-                                    <div className="w-full space-y-3 md:w-80">
-                                        <CreateProposalButton
-                                            projectId={project.id}
-                                            engineerId={engineer.id}
-                                        />
-
-                                        <Link
-                                            href={`/dashboard/engineers/${engineer.id}`}
-                                            className="block rounded-lg bg-blue-600 px-4 py-2 text-center text-sm font-bold text-white hover:bg-blue-700"
-                                        >
-                                            要員詳細
-                                        </Link>
-                                    </div>
-                                </div>
-                            </article>
-                        ))}
+                                </article>
+                            ),
+                        )}
                     </section>
                 )}
 

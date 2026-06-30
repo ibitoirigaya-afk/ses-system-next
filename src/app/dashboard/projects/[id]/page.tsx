@@ -3,7 +3,10 @@ import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { ProjectDeleteButton } from "@/features/projects/ProjectDeleteButton";
-import { getProjectById } from "@/lib/repositories/projectRepository";
+import {
+    getProjectByIdForUser,
+    getProjectManageTargetForUser,
+} from "@/lib/repositories/projectRepository";
 
 type Props = {
     params: Promise<{
@@ -14,16 +17,24 @@ type Props = {
 export default async function ProjectDetailPage({ params }: Props) {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
     const { id } = await params;
-    const project = await getProjectById(id);
+
+    const project = await getProjectByIdForUser(id, session.user.id);
 
     if (!project) {
         notFound();
     }
+
+    const manageTargetProject = await getProjectManageTargetForUser(
+        id,
+        session.user.id,
+    );
+
+    const canManageProject = Boolean(manageTargetProject);
 
     return (
         <main className="min-h-screen bg-slate-100 p-8">
@@ -51,28 +62,36 @@ export default async function ProjectDetailPage({ params }: Props) {
                             マッチング
                         </Link>
 
-                        <Link
-                            href={`/dashboard/projects/${project.id}/edit`}
-                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
-                        >
-                            編集する
-                        </Link>
+                        {canManageProject && (
+                            <>
+                                <Link
+                                    href={`/dashboard/projects/${project.id}/edit`}
+                                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+                                >
+                                    編集する
+                                </Link>
 
-                        <ProjectDeleteButton projectId={project.id} />
+                                <ProjectDeleteButton projectId={project.id} />
+                            </>
+                        )}
                     </div>
                 </div>
 
                 <section className="rounded-2xl bg-white p-8 shadow">
                     <dl className="grid gap-6">
                         <div>
-                            <dt className="text-sm font-bold text-slate-500">案件名</dt>
+                            <dt className="text-sm font-bold text-slate-500">
+                                案件名
+                            </dt>
                             <dd className="mt-2 text-lg font-semibold text-slate-900">
                                 {project.title}
                             </dd>
                         </div>
 
                         <div>
-                            <dt className="text-sm font-bold text-slate-500">案件概要</dt>
+                            <dt className="text-sm font-bold text-slate-500">
+                                案件概要
+                            </dt>
                             <dd className="mt-2 whitespace-pre-wrap leading-7 text-slate-700">
                                 {project.description}
                             </dd>
@@ -80,12 +99,18 @@ export default async function ProjectDetailPage({ params }: Props) {
 
                         <div className="grid gap-6 md:grid-cols-2">
                             <div>
-                                <dt className="text-sm font-bold text-slate-500">勤務地</dt>
-                                <dd className="mt-2 text-slate-900">{project.location}</dd>
+                                <dt className="text-sm font-bold text-slate-500">
+                                    勤務地
+                                </dt>
+                                <dd className="mt-2 text-slate-900">
+                                    {project.location}
+                                </dd>
                             </div>
 
                             <div>
-                                <dt className="text-sm font-bold text-slate-500">単価</dt>
+                                <dt className="text-sm font-bold text-slate-500">
+                                    単価
+                                </dt>
                                 <dd className="mt-2 text-slate-900">
                                     {project.unitPrice.toLocaleString()}円
                                 </dd>
@@ -93,12 +118,18 @@ export default async function ProjectDetailPage({ params }: Props) {
                         </div>
 
                         <div>
-                            <dt className="text-sm font-bold text-slate-500">ステータス</dt>
-                            <dd className="mt-2 text-slate-900">{project.status}</dd>
+                            <dt className="text-sm font-bold text-slate-500">
+                                ステータス
+                            </dt>
+                            <dd className="mt-2 text-slate-900">
+                                {project.status}
+                            </dd>
                         </div>
 
                         <div>
-                            <dt className="text-sm font-bold text-slate-500">必要スキル</dt>
+                            <dt className="text-sm font-bold text-slate-500">
+                                必要スキル
+                            </dt>
                             <dd className="mt-3">
                                 {project.skills.length === 0 ? (
                                     <p className="text-sm text-slate-500">

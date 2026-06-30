@@ -4,8 +4,11 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import {
+    canCreateProjectForUser,
     createProject,
     deleteProject,
+    getDeletedProjectByIdForUser,
+    getProjectManageTargetForUser,
     restoreProject,
     updateProject,
 } from "@/lib/repositories/projectRepository";
@@ -15,6 +18,14 @@ export async function deleteProjectAction(id: string) {
 
     if (!session?.user?.id) {
         redirect("/login");
+    }
+
+    const project = await getProjectManageTargetForUser(id, session.user.id);
+
+    if (!project) {
+        return {
+            error: "この案件を削除する権限がありません。",
+        };
     }
 
     await deleteProject(id);
@@ -29,6 +40,14 @@ export async function restoreProjectAction(id: string) {
         redirect("/login");
     }
 
+    const project = await getDeletedProjectByIdForUser(id, session.user.id);
+
+    if (!project) {
+        return {
+            error: "この案件を復元する権限がありません。",
+        };
+    }
+
     await restoreProject(id);
 
     redirect("/dashboard/projects");
@@ -39,6 +58,14 @@ export async function updateProjectAction(id: string, formData: FormData) {
 
     if (!session?.user?.id) {
         redirect("/login");
+    }
+
+    const project = await getProjectManageTargetForUser(id, session.user.id);
+
+    if (!project) {
+        return {
+            error: "この案件を編集する権限がありません。",
+        };
     }
 
     const title = String(formData.get("title") ?? "");
@@ -76,6 +103,14 @@ export async function createProjectAction(formData: FormData) {
 
     if (!session?.user?.id) {
         redirect("/login");
+    }
+
+    const canCreate = await canCreateProjectForUser(session.user.id);
+
+    if (!canCreate) {
+        return {
+            error: "案件を登録する権限がありません。",
+        };
     }
 
     const title = String(formData.get("title") ?? "");

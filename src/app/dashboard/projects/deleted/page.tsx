@@ -3,16 +3,16 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { ProjectRestoreButton } from "@/features/projects/ProjectRestoreButton";
-import { getDeletedProjects } from "@/lib/repositories/projectRepository";
+import { getDeletedProjectsForUser } from "@/lib/repositories/projectRepository";
 
 export default async function DeletedProjectsPage() {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
-    const projects = await getDeletedProjects();
+    const projects = await getDeletedProjectsForUser(session.user.id);
 
     return (
         <main className="min-h-screen bg-slate-100 p-8">
@@ -50,16 +50,20 @@ export default async function DeletedProjectsPage() {
                                             </p>
 
                                             <p className="mt-1 text-sm text-slate-500">
-                                                作成者：{project.createdBy.name}
+                                                作成者：
+                                                {project.createdBy.name}
                                             </p>
                                         </div>
 
                                         <div className="flex flex-col items-start gap-3 md:items-end">
                                             <p className="text-lg font-bold text-slate-900">
-                                                {project.unitPrice.toLocaleString()}円
+                                                {project.unitPrice.toLocaleString()}
+                                                円
                                             </p>
 
-                                            <ProjectRestoreButton projectId={project.id} />
+                                            <ProjectRestoreButton
+                                                projectId={project.id}
+                                            />
                                         </div>
                                     </div>
                                 </div>
