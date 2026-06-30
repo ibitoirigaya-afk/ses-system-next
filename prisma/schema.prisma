@@ -43,6 +43,7 @@ model User {
   engineers         Engineer[]        @relation("UserEngineers")
   proposalHistories ProposalHistory[] @relation("UserProposalHistories")
   workRecords       WorkRecord[]      @relation("UserWorkRecords")
+  bpCompanies       BpCompany[]       @relation("UserBpCompanies")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -201,4 +202,24 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model BpCompany {
+  id String @id @default(cuid())
+
+  name          String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  memo          String?
+
+  createdById String
+  createdBy   User   @relation("UserBpCompanies", fields: [createdById], references: [id])
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([name])
 }
