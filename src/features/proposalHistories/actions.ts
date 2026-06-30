@@ -4,6 +4,8 @@ import type { ProposalStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { getEngineerByIdForUser } from "@/lib/repositories/engineerRepository";
+import { getProjectByIdForUser } from "@/lib/repositories/projectRepository";
 import {
     createProposalHistory,
     deleteProposalHistory,
@@ -65,6 +67,22 @@ export async function createProposalHistoryAction(formData: FormData) {
     if (projectId.trim() === "" || engineerId.trim() === "") {
         return {
             error: "案件または要員が正しく選択されていません。",
+        };
+    }
+
+    const project = await getProjectByIdForUser(projectId, session.user.id);
+
+    if (!project) {
+        return {
+            error: "この案件に提案する権限がありません。",
+        };
+    }
+
+    const engineer = await getEngineerByIdForUser(engineerId, session.user.id);
+
+    if (!engineer) {
+        return {
+            error: "この要員を提案する権限がありません。",
         };
     }
 
