@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import {
     createBpCompany,
     deleteBpCompany,
+    getBpCompanyByJoinCode,
     getBpCompanyByName,
     restoreBpCompany,
     updateBpCompany,
@@ -19,6 +20,25 @@ function toOptionalString(value: FormDataEntryValue | null) {
     }
 
     return text;
+}
+
+function generateJoinCode() {
+    const randomText = Math.random().toString(36).slice(2, 8).toUpperCase();
+
+    return `BP-${randomText}`;
+}
+
+async function generateUniqueJoinCode() {
+    for (let i = 0; i < 10; i += 1) {
+        const joinCode = generateJoinCode();
+        const existingBpCompany = await getBpCompanyByJoinCode(joinCode);
+
+        if (!existingBpCompany) {
+            return joinCode;
+        }
+    }
+
+    throw new Error("参加コードの生成に失敗しました。");
 }
 
 export async function createBpCompanyAction(formData: FormData) {
@@ -44,8 +64,11 @@ export async function createBpCompanyAction(formData: FormData) {
         };
     }
 
+    const joinCode = await generateUniqueJoinCode();
+
     await createBpCompany({
         name,
+        joinCode,
         contactPerson: toOptionalString(formData.get("contactPerson")),
         email: toOptionalString(formData.get("email")),
         phone: toOptionalString(formData.get("phone")),

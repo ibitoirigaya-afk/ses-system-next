@@ -2,16 +2,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
-import { getEngineers } from "@/lib/repositories/engineerRepository";
+import { getEngineersForUser } from "@/lib/repositories/engineerRepository";
 
 export default async function EngineersPage() {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
-    const engineers = await getEngineers();
+    const engineers = await getEngineersForUser(session.user.id);
 
     return (
         <main className="min-h-screen bg-slate-100 p-8">

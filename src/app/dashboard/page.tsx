@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { auth } from "@/auth";
+import { getBpCompanyCount } from "@/lib/repositories/bpCompanyRepository";
 import { getEngineerCount } from "@/lib/repositories/engineerRepository";
 import { getProjectCount } from "@/lib/repositories/projectRepository";
 import {
@@ -13,31 +16,37 @@ const menuItems = [
         title: "案件管理",
         description: "案件の一覧・登録・編集を管理します。",
         href: "/dashboard/projects",
+        roles: ["admin", "user", "company"],
     },
     {
         title: "要員管理",
         description: "要員情報、スキル、希望条件を管理します。",
         href: "/dashboard/engineers",
+        roles: ["admin", "user", "company"],
     },
     {
         title: "スキル管理",
         description: "案件・要員に紐付けるスキルを管理します。",
         href: "/dashboard/skills",
+        roles: ["admin", "user"],
     },
     {
         title: "BP企業管理",
         description: "BP企業情報と所属要員を管理します。",
         href: "/dashboard/bp-companies",
+        roles: ["admin"],
     },
     {
         title: "提案履歴",
         description: "案件への提案状況や面談状況を管理します。",
         href: "/dashboard/proposal-histories",
+        roles: ["admin", "user", "company"],
     },
     {
         title: "稼働実績",
         description: "売上・支払い・粗利を管理します。",
         href: "/dashboard/work-records",
+        roles: ["admin"],
     },
 ];
 
@@ -66,14 +75,41 @@ function getProposalStatusLabel(status: string) {
 }
 
 export default async function DashboardPage() {
+    const session = await auth();
+
+    if (!session) {
+        redirect("/login");
+    }
+
+    const role = session.user?.role ?? "user";
+    const filteredMenuItems = menuItems.filter((item) =>
+        item.roles.includes(role),
+    );
+
+    const dashboardTitle =
+        role === "admin"
+            ? "管理者TOP"
+            : role === "company"
+                ? "BP企業TOP"
+                : "要員担当TOP";
+
+    const dashboardDescription =
+        role === "admin"
+            ? "システム全体の状況を確認できます。"
+            : role === "company"
+                ? "自社の案件・要員・提案状況を確認できます。"
+                : "担当要員や提案状況を確認できます。";
+
     const [
         projectCount,
+        bpCompanyCount,
         engineerCount,
         proposalHistoryCount,
         currentMonthGrossProfitTotal,
         recentProposalHistories,
     ] = await Promise.all([
         getProjectCount(),
+        getBpCompanyCount(),
         getEngineerCount(),
         getProposalHistoryCount(),
         getCurrentMonthGrossProfitTotal(),
@@ -85,20 +121,28 @@ export default async function DashboardPage() {
             <div className="mx-auto max-w-6xl space-y-8">
                 <section>
                     <h2 className="text-2xl font-bold text-slate-900">
-                        管理者TOP
+                        {dashboardTitle}
                     </h2>
 
                     <p className="mt-2 text-slate-500">
-                        システム全体の状況を確認できます。
+                        {dashboardDescription}
                     </p>
                 </section>
 
-                <section className="grid gap-4 md:grid-cols-4">
+                <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                     <div className="rounded-2xl bg-white p-6 shadow">
                         <p className="text-sm font-bold text-slate-500">案件数</p>
                         <p className="mt-3 text-3xl font-bold text-slate-900">
                             {projectCount}
                             <span className="ml-1 text-base text-slate-500">件</span>
+                        </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-white p-6 shadow">
+                        <p className="text-sm font-bold text-slate-500">BP企業数</p>
+                        <p className="mt-3 text-3xl font-bold text-slate-900">
+                            {bpCompanyCount}
+                            <span className="ml-1 text-base text-slate-500">社</span>
                         </p>
                     </div>
 
@@ -133,7 +177,7 @@ export default async function DashboardPage() {
                     <h2 className="text-xl font-bold text-slate-900">機能メニュー</h2>
 
                     <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {menuItems.map((item) => (
+                        {filteredMenuItems.map((item) => (
                             <Link
                                 key={item.href}
                                 href={item.href}

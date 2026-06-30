@@ -3,34 +3,45 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+type Props = {
+    role: string;
+};
+
 const navItems = [
     {
         title: "TOP",
         href: "/dashboard",
+        roles: ["admin", "user", "company"],
     },
     {
         title: "案件",
         href: "/dashboard/projects",
+        roles: ["admin", "user", "company"],
     },
     {
         title: "BP企業",
         href: "/dashboard/bp-companies",
+        roles: ["admin"],
     },
     {
         title: "要員",
         href: "/dashboard/engineers",
+        roles: ["admin", "user", "company"],
     },
     {
         title: "スキル",
         href: "/dashboard/skills",
+        roles: ["admin", "user"],
     },
     {
         title: "提案履歴",
         href: "/dashboard/proposal-histories",
+        roles: ["admin", "user", "company"],
     },
     {
         title: "稼働実績",
         href: "/dashboard/work-records",
+        roles: ["admin"],
     },
 ];
 
@@ -42,13 +53,17 @@ function isActivePath(pathname: string, href: string) {
     return pathname.startsWith(href);
 }
 
-export default function DashboardNav() {
+export default function DashboardNav({ role }: Props) {
     const pathname = usePathname();
+
+    const filteredNavItems = navItems.filter((item) =>
+        item.roles.includes(role),
+    );
 
     return (
         <nav className="border-b border-slate-300 bg-white">
             <div className="mx-auto flex max-w-6xl gap-3 overflow-x-auto px-8 py-3">
-                {navItems.map((item) => {
+                {filteredNavItems.map((item) => {
                     const isActive = isActivePath(pathname, item.href);
 
                     return (

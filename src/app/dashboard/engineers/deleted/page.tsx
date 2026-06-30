@@ -3,16 +3,16 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { EngineerRestoreButton } from "@/features/engineers/EngineerRestoreButton";
-import { getDeletedEngineers } from "@/lib/repositories/engineerRepository";
+import { getDeletedEngineersForUser } from "@/lib/repositories/engineerRepository";
 
 export default async function DeletedEngineersPage() {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
-    const engineers = await getDeletedEngineers();
+    const engineers = await getDeletedEngineersForUser(session.user.id);
 
     return (
         <main className="min-h-screen bg-slate-100 p-8">

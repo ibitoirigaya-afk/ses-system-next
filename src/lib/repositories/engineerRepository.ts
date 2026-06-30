@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 type CreateEngineerInput = {
     name: string;
     companyName: string;
+    bpCompanyId?: string | null;
     age?: number | null;
     gender?: string | null;
     nearestStation?: string | null;
@@ -19,6 +20,7 @@ type CreateEngineerInput = {
 type UpdateEngineerInput = {
     name: string;
     companyName: string;
+    bpCompanyId?: string | null;
     age?: number | null;
     gender?: string | null;
     nearestStation?: string | null;
@@ -33,6 +35,7 @@ type UpdateEngineerInput = {
 
 const engineerInclude = {
     createdBy: true,
+    bpCompany: true,
     skills: {
         where: {
             deletedAt: null,
@@ -91,6 +94,15 @@ export async function createEngineer(input: CreateEngineerInput) {
         data: {
             name: input.name,
             companyName: input.companyName,
+            ...(input.bpCompanyId
+                ? {
+                    bpCompany: {
+                        connect: {
+                            id: input.bpCompanyId,
+                        },
+                    },
+                }
+                : {}),
             age: input.age,
             gender: input.gender,
             nearestStation: input.nearestStation,
@@ -124,6 +136,21 @@ export async function updateEngineer(id: string, input: UpdateEngineerInput) {
         data: {
             name: input.name,
             companyName: input.companyName,
+            ...(input.bpCompanyId === undefined
+                ? {}
+                : input.bpCompanyId === null
+                    ? {
+                        bpCompany: {
+                            disconnect: true,
+                        },
+                    }
+                    : {
+                        bpCompany: {
+                            connect: {
+                                id: input.bpCompanyId,
+                            },
+                        },
+                    }),
             age: input.age,
             gender: input.gender,
             nearestStation: input.nearestStation,
@@ -169,5 +196,217 @@ export async function getEngineerCount() {
         where: {
             deletedAt: null,
         },
+    });
+}
+
+export async function getEngineersForUser(userId: string) {
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+        select: {
+            id: true,
+            role: true,
+            bpCompanyId: true,
+        },
+    });
+
+    if (!user) {
+        return [];
+    }
+
+    if (user.role === "admin") {
+        return prisma.engineer.findMany({
+            where: {
+                deletedAt: null,
+            },
+            include: engineerInclude,
+            orderBy: {
+                createdAt: "desc",
+            },
+        });
+    }
+
+    if (user.bpCompanyId) {
+        return prisma.engineer.findMany({
+            where: {
+                deletedAt: null,
+                bpCompanyId: user.bpCompanyId,
+            },
+            include: engineerInclude,
+            orderBy: {
+                createdAt: "desc",
+            },
+        });
+    }
+
+    return prisma.engineer.findMany({
+        where: {
+            deletedAt: null,
+            createdById: user.id,
+        },
+        include: engineerInclude,
+        orderBy: {
+            createdAt: "desc",
+        },
+    });
+}
+
+export async function getEngineerByIdForUser(id: string, userId: string) {
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+        select: {
+            id: true,
+            role: true,
+            bpCompanyId: true,
+        },
+    });
+
+    if (!user) {
+        return null;
+    }
+
+    if (user.role === "admin") {
+        return prisma.engineer.findFirst({
+            where: {
+                id,
+                deletedAt: null,
+            },
+            include: engineerInclude,
+        });
+    }
+
+    if (user.bpCompanyId) {
+        return prisma.engineer.findFirst({
+            where: {
+                id,
+                deletedAt: null,
+                bpCompanyId: user.bpCompanyId,
+            },
+            include: engineerInclude,
+        });
+    }
+
+    return prisma.engineer.findFirst({
+        where: {
+            id,
+            deletedAt: null,
+            createdById: user.id,
+        },
+        include: engineerInclude,
+    });
+}
+
+export async function getDeletedEngineersForUser(userId: string) {
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+        select: {
+            id: true,
+            role: true,
+            bpCompanyId: true,
+        },
+    });
+
+    if (!user) {
+        return [];
+    }
+
+    if (user.role === "admin") {
+        return prisma.engineer.findMany({
+            where: {
+                deletedAt: {
+                    not: null,
+                },
+            },
+            include: engineerInclude,
+            orderBy: {
+                deletedAt: "desc",
+            },
+        });
+    }
+
+    if (user.bpCompanyId) {
+        return prisma.engineer.findMany({
+            where: {
+                deletedAt: {
+                    not: null,
+                },
+                bpCompanyId: user.bpCompanyId,
+            },
+            include: engineerInclude,
+            orderBy: {
+                deletedAt: "desc",
+            },
+        });
+    }
+
+    return prisma.engineer.findMany({
+        where: {
+            deletedAt: {
+                not: null,
+            },
+            createdById: user.id,
+        },
+        include: engineerInclude,
+        orderBy: {
+            deletedAt: "desc",
+        },
+    });
+}
+
+export async function getDeletedEngineerByIdForUser(id: string, userId: string) {
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+        select: {
+            id: true,
+            role: true,
+            bpCompanyId: true,
+        },
+    });
+
+    if (!user) {
+        return null;
+    }
+
+    if (user.role === "admin") {
+        return prisma.engineer.findFirst({
+            where: {
+                id,
+                deletedAt: {
+                    not: null,
+                },
+            },
+            include: engineerInclude,
+        });
+    }
+
+    if (user.bpCompanyId) {
+        return prisma.engineer.findFirst({
+            where: {
+                id,
+                deletedAt: {
+                    not: null,
+                },
+                bpCompanyId: user.bpCompanyId,
+            },
+            include: engineerInclude,
+        });
+    }
+
+    return prisma.engineer.findFirst({
+        where: {
+            id,
+            deletedAt: {
+                not: null,
+            },
+            createdById: user.id,
+        },
+        include: engineerInclude,
     });
 }

@@ -39,11 +39,17 @@ model User {
   passwordHash String
   role         UserRole @default(user)
 
+  companyName String?
+  isBpCompany Boolean @default(false)
+
   projects          Project[]         @relation("UserProjects")
   engineers         Engineer[]        @relation("UserEngineers")
   proposalHistories ProposalHistory[] @relation("UserProposalHistories")
   workRecords       WorkRecord[]      @relation("UserWorkRecords")
   bpCompanies       BpCompany[]       @relation("UserBpCompanies")
+
+  bpCompanyId String?
+  bpCompany   BpCompany? @relation("BpCompanyUsers", fields: [bpCompanyId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -88,9 +94,13 @@ model Skill {
 }
 
 model Engineer {
-  id                String         @id @default(cuid())
-  name              String
-  companyName       String
+  id          String @id @default(cuid())
+  name        String
+  companyName String
+
+  bpCompanyId String?
+  bpCompany   BpCompany? @relation("BpCompanyEngineers", fields: [bpCompanyId], references: [id])
+
   age               Int?
   gender            String?
   nearestStation    String?
@@ -208,6 +218,7 @@ model BpCompany {
   id String @id @default(cuid())
 
   name          String
+  joinCode      String  @unique
   contactPerson String?
   email         String?
   phone         String?
@@ -216,6 +227,9 @@ model BpCompany {
 
   createdById String
   createdBy   User   @relation("UserBpCompanies", fields: [createdById], references: [id])
+
+  users     User[]     @relation("BpCompanyUsers")
+  engineers Engineer[] @relation("BpCompanyEngineers")
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())

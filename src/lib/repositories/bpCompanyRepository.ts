@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 
 type CreateBpCompanyInput = {
     name: string;
+    joinCode: string;
     contactPerson?: string | null;
     email?: string | null;
     phone?: string | null;
@@ -68,10 +69,19 @@ export async function getBpCompanyByName(name: string) {
     });
 }
 
+export async function getBpCompanyByJoinCode(joinCode: string) {
+    return prisma.bpCompany.findUnique({
+        where: {
+            joinCode,
+        },
+    });
+}
+
 export async function createBpCompany(input: CreateBpCompanyInput) {
     return prisma.bpCompany.create({
         data: {
             name: input.name,
+            joinCode: input.joinCode,
             contactPerson: input.contactPerson,
             email: input.email,
             phone: input.phone,

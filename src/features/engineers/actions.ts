@@ -3,9 +3,12 @@
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { prisma } from "@/lib/db";
 import {
     createEngineer,
     deleteEngineer,
+    getDeletedEngineerByIdForUser,
+    getEngineerByIdForUser,
     restoreEngineer,
     updateEngineer,
 } from "@/lib/repositories/engineerRepository";
@@ -46,6 +49,17 @@ function toOptionalDate(value: FormDataEntryValue | null) {
     return new Date(text);
 }
 
+async function getCurrentUser(userId: string) {
+    return prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+        include: {
+            bpCompany: true,
+        },
+    });
+}
+
 export async function createEngineerAction(formData: FormData) {
     const session = await auth();
 
@@ -53,11 +67,23 @@ export async function createEngineerAction(formData: FormData) {
         redirect("/login");
     }
 
+    const currentUser = await getCurrentUser(session.user.id);
+
+    if (!currentUser) {
+        redirect("/login");
+    }
+
     const name = String(formData.get("name") ?? "");
-    const companyName = String(formData.get("companyName") ?? "");
+    const inputCompanyName = String(formData.get("companyName") ?? "");
     const skillIds = formData.getAll("skillIds").map(String);
 
-    if (name.trim() === "" || companyName.trim() === "") {
+    const resolvedBpCompanyId = currentUser.bpCompanyId ?? null;
+    const resolvedCompanyName =
+        currentUser.bpCompany?.name ??
+        currentUser.companyName ??
+        inputCompanyName;
+
+    if (name.trim() === "" || resolvedCompanyName.trim() === "") {
         return {
             error: "氏名と所属会社を入力してください。",
         };
@@ -65,7 +91,8 @@ export async function createEngineerAction(formData: FormData) {
 
     await createEngineer({
         name,
-        companyName,
+        companyName: resolvedCompanyName,
+        bpCompanyId: resolvedBpCompanyId,
         age: toOptionalNumber(formData.get("age")),
         gender: toOptionalString(formData.get("gender")),
         nearestStation: toOptionalString(formData.get("nearestStation")),
@@ -89,11 +116,33 @@ export async function updateEngineerAction(id: string, formData: FormData) {
         redirect("/login");
     }
 
+    const currentUser = await getCurrentUser(session.user.id);
+
+    if (!currentUser) {
+        redirect("/login");
+    }
+
+    const targetEngineer = await getEngineerByIdForUser(id, session.user.id);
+
+    if (!targetEngineer) {
+        return {
+            error: "この要員を編集する権限がありません。",
+        };
+    }
+
     const name = String(formData.get("name") ?? "");
-    const companyName = String(formData.get("companyName") ?? "");
+    const inputCompanyName = String(formData.get("companyName") ?? "");
     const skillIds = formData.getAll("skillIds").map(String);
 
-    if (name.trim() === "" || companyName.trim() === "") {
+    const resolvedCompanyName =
+        currentUser.bpCompany?.name ??
+        currentUser.companyName ??
+        inputCompanyName;
+
+    const resolvedBpCompanyId =
+        currentUser.bpCompanyId !== null ? currentUser.bpCompanyId : undefined;
+
+    if (name.trim() === "" || resolvedCompanyName.trim() === "") {
         return {
             error: "氏名と所属会社を入力してください。",
         };
@@ -101,7 +150,8 @@ export async function updateEngineerAction(id: string, formData: FormData) {
 
     await updateEngineer(id, {
         name,
-        companyName,
+        companyName: resolvedCompanyName,
+        bpCompanyId: resolvedBpCompanyId,
         age: toOptionalNumber(formData.get("age")),
         gender: toOptionalString(formData.get("gender")),
         nearestStation: toOptionalString(formData.get("nearestStation")),
@@ -124,6 +174,14 @@ export async function deleteEngineerAction(id: string) {
         redirect("/login");
     }
 
+    const targetEngineer = await getEngineerByIdForUser(id, session.user.id);
+
+    if (!targetEngineer) {
+        return {
+            error: "この要員を削除する権限がありません。",
+        };
+    }
+
     await deleteEngineer(id);
 
     redirect("/dashboard/engineers");
@@ -134,6 +192,17 @@ export async function restoreEngineerAction(id: string) {
 
     if (!session?.user?.id) {
         redirect("/login");
+    }
+
+    const targetEngineer = await getDeletedEngineerByIdForUser(
+        id,
+        session.user.id,
+    );
+
+    if (!targetEngineer) {
+        return {
+            error: "この要員を復元する権限がありません。",
+        };
     }
 
     await restoreEngineer(id);

@@ -2,8 +2,8 @@ import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import EngineerEditForm from "@/features/engineers/EngineerEditForm";
-import { getEngineerById } from "@/lib/repositories/engineerRepository";
 import { getSkills } from "@/lib/repositories/skillRepository";
+import { getEngineerByIdForUser } from "@/lib/repositories/engineerRepository";
 
 type Props = {
     params: Promise<{
@@ -14,13 +14,13 @@ type Props = {
 export default async function EngineerEditPage({ params }: Props) {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
     const { id } = await params;
 
-    const engineer = await getEngineerById(id);
+    const engineer = await getEngineerByIdForUser(id, session.user.id);
 
     if (!engineer) {
         notFound();
@@ -29,17 +29,19 @@ export default async function EngineerEditPage({ params }: Props) {
     const skills = await getSkills();
 
     return (
-        <main className="min-h-screen bg-slate-100 p-8">
+        <main className="px-8 py-10">
             <div className="mx-auto max-w-3xl space-y-6">
                 <div>
-                    <p className="text-sm font-semibold text-blue-600">Engineer Edit</p>
+                    <p className="text-sm font-semibold text-blue-600">
+                        Engineer Edit
+                    </p>
 
                     <h1 className="mt-2 text-3xl font-bold text-slate-900">
                         要員編集
                     </h1>
 
                     <p className="mt-2 text-sm text-slate-500">
-                        要員情報と保有スキルを編集できます。
+                        要員情報・スキル・希望条件を編集できます。
                     </p>
                 </div>
 

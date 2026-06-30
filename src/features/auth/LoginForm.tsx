@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { loginAction } from "./actions";
@@ -63,6 +64,16 @@ export function LoginForm() {
             >
                 ログイン
             </button>
+
+            <p className="text-center text-sm text-slate-500">
+                アカウントを持っていない場合は{" "}
+                <Link
+                    href="/register"
+                    className="font-bold text-blue-600 hover:text-blue-700"
+                >
+                    新規登録
+                </Link>
+            </p>
         </form>
     );
 }

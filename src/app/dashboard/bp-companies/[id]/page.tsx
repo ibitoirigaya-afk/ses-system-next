@@ -60,6 +60,18 @@ export default async function BpCompanyDetailPage({ params }: Props) {
                             </dd>
                         </div>
 
+                        <div>
+                            <dt className="text-sm font-bold text-slate-500">
+                                参加コード
+                            </dt>
+                            <dd className="mt-2 inline-flex rounded-lg bg-slate-100 px-4 py-2 font-mono text-lg font-bold text-slate-900">
+                                {bpCompany.joinCode}
+                            </dd>
+                            <p className="mt-2 text-sm text-slate-500">
+                                companyユーザー登録時に、このコードを入力してもらいます。
+                            </p>
+                        </div>
+
                         <div className="grid gap-6 md:grid-cols-2">
                             <div>
                                 <dt className="text-sm font-bold text-slate-500">

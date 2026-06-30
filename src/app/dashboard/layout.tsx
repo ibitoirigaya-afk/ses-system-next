@@ -42,7 +42,7 @@ export default async function DashboardLayout({ children }: Props) {
                     </div>
                 </header>
 
-                <DashboardNav />
+                <DashboardNav role={session.user?.role ?? ""} />
             </div>
 
             {children}

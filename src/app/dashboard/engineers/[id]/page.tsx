@@ -3,8 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { EngineerDeleteButton } from "@/features/engineers/EngineerDeleteButton";
-import { getEngineerById } from "@/lib/repositories/engineerRepository";
-
+import { getEngineerByIdForUser } from "@/lib/repositories/engineerRepository";
 type Props = {
     params: Promise<{
         id: string;
@@ -14,12 +13,13 @@ type Props = {
 export default async function EngineerDetailPage({ params }: Props) {
     const session = await auth();
 
-    if (!session) {
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
     const { id } = await params;
-    const engineer = await getEngineerById(id);
+
+    const engineer = await getEngineerByIdForUser(id, session.user.id);
 
     if (!engineer) {
         notFound();
