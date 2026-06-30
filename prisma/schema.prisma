@@ -42,6 +42,7 @@ model User {
   projects          Project[]         @relation("UserProjects")
   engineers         Engineer[]        @relation("UserEngineers")
   proposalHistories ProposalHistory[] @relation("UserProposalHistories")
+  workRecords       WorkRecord[]      @relation("UserWorkRecords")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -63,6 +64,7 @@ model Project {
 
   skills            Skill[]           @relation("ProjectSkills")
   proposalHistories ProposalHistory[]
+  workRecords       WorkRecord[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -104,6 +106,7 @@ model Engineer {
 
   skills            Skill[]           @relation("EngineerSkills")
   proposalHistories ProposalHistory[]
+  workRecords       WorkRecord[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -126,6 +129,30 @@ model ProposalHistory {
 
   createdById String
   createdBy   User   @relation("UserProposalHistories", fields: [createdById], references: [id])
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model WorkRecord {
+  id String @id @default(cuid())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  engineerId String
+  engineer   Engineer @relation(fields: [engineerId], references: [id])
+
+  targetMonth   String
+  workingHours  Int
+  billingAmount Int
+  paymentAmount Int
+  grossProfit   Int
+  memo          String?
+
+  createdById String
+  createdBy   User   @relation("UserWorkRecords", fields: [createdById], references: [id])
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
